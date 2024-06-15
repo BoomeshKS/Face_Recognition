@@ -206,6 +206,8 @@
 
 
 
+
+
 import streamlit as st
 import cv2
 import pandas as pd
@@ -301,7 +303,17 @@ if menu == "Face Attendance":
     st.header("Face Attendance")
     run = st.checkbox('Run', key="attendance_run")
     FRAME_WINDOW = st.image([])
-    cap = start_camera()
+    
+    camera_indices = [0, 1, 2, 3]  # Add more indices if needed
+    cap = None
+    for index in camera_indices:
+        cap = start_camera(index)
+        if cap:
+            break
+    
+    if not cap:
+        st.error("No available camera found.")
+
     registered_faces = load_registered_faces()
 
     while run and cap:
@@ -364,7 +376,15 @@ elif menu == "Register Face":
 
     if st.session_state.start_camera:
         FRAME_WINDOW = st.image([])
-        cap = start_camera()
+        cap = None
+        for index in camera_indices:
+            cap = start_camera(index)
+            if cap:
+                break
+        
+        if not cap:
+            st.error("No available camera found.")
+        
         user = 1
 
         while cap and cap.isOpened():
