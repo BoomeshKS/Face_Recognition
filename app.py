@@ -304,51 +304,58 @@ camera_indices = [0, 1, 2, 3]  # Define camera indices here
 
 if menu == "Face Attendance":
     st.header("Face Attendance")
-    run = st.checkbox('Run', key="attendance_run")
-    FRAME_WINDOW = st.image([])
     
-    cap = None
-    for index in camera_indices:
-        cap = start_camera(index)
-        if cap:
-            break
+    if st.button('Start Camera', key="start_camera_button"):
+        st.session_state.start_camera = True
     
-    if not cap:
-        st.error("No available camera found.")
+    if st.session_state.start_camera:
+        FRAME_WINDOW = st.image([])
+        
+        cap = None
+        for index in camera_indices:
+            cap = start_camera(index)
+            if cap:
+                break
 
-    registered_faces = load_registered_faces()
+        if not cap:
+            st.error("No available camera found.")
+            st.session_state.start_camera = False
+        else:
+            registered_faces = load_registered_faces()
 
-    while run and cap:
-        ret, frame = cap.read()
-        if not ret:
-            st.warning("Failed to capture image from camera.")
-            break
+            while st.session_state.start_camera and cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    st.warning("Failed to capture image from camera.")
+                    break
 
-        faces = face_cascade.detectMultiScale(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+                faces = face_cascade.detectMultiScale(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-        for (x, y, w, h) in faces:
-            face_crop = frame[y:y+h, x:x+w]
-            name, email = compare_faces(face_crop, registered_faces)
-            if name and email:
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                cv2.putText(frame, f"Name: {name}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                cv2.putText(frame, f"Email: {email}", (x, y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                # Log attendance if not already recorded
-                if not ((st.session_state.attendance_history['Name'] == name) & 
-                        (st.session_state.attendance_history['Email'] == email) & 
-                        (st.session_state.attendance_history['Date'] == datetime.date.today().strftime('%Y-%m-%d'))).any():
-                    now = datetime.datetime.now()
-                    new_entry = pd.DataFrame([{"Name": name, "Email": email, "Date": now.date().strftime('%Y-%m-%d'), "Time": now.time().strftime('%H:%M:%S')}])
-                    st.session_state.attendance_history = pd.concat([st.session_state.attendance_history, new_entry], ignore_index=True)
-                    save_data(attendance_file, st.session_state.attendance_history)
-            else:
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                cv2.putText(frame, "Unknown", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                for (x, y, w, h) in faces:
+                    face_crop = frame[y:y+h, x:x+w]
+                    name, email = compare_faces(face_crop, registered_faces)
+                    if name and email:
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                        cv2.putText(frame, f"Name: {name}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        cv2.putText(frame, f"Email: {email}", (x, y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                        # Log attendance if not already recorded
+                        if not ((st.session_state.attendance_history['Name'] == name) & 
+                                (st.session_state.attendance_history['Email'] == email) & 
+                                (st.session_state.attendance_history['Date'] == datetime.date.today().strftime('%Y-%m-%d'))).any():
+                            now = datetime.datetime.now()
+                            new_entry = pd.DataFrame([{"Name": name, "Email": email, "Date": now.date().strftime('%Y-%m-%d'), "Time": now.time().strftime('%H:%M:%S')}])
+                            st.session_state.attendance_history = pd.concat([st.session_state.attendance_history, new_entry], ignore_index=True)
+                            save_data(attendance_file, st.session_state.attendance_history)
+                    else:
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                        cv2.putText(frame, "Unknown", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-        FRAME_WINDOW.image(frame, channels="BGR")
+                FRAME_WINDOW.image(frame, channels="BGR")
+    
+            cap.release()
 
-    if cap:
-        cap.release()
+    if st.button('Stop Camera', key="stop_camera_button"):
+        st.session_state.start_camera = False
 
 elif menu == "Register Face":
     st.header("Register Face")
@@ -373,7 +380,7 @@ elif menu == "Register Face":
     st.write("OR")
 
     # Capture from live video section
-    if st.button('Start Camera', key="start_camera_button"):
+    if st.button('Start Camera', key="start_camera_button_register"):
         st.session_state.start_camera = True
 
     if st.session_state.start_camera:
@@ -412,7 +419,7 @@ elif menu == "Register Face":
             cap.release()
 
     if st.session_state.captured_frame is not None:
-        st.image(st.session_state.captured_frame, caption='Captured Image', use_column_width=True)
+        st.image(st.session_state.captured_frame, caption='Captured Frame', use_column_width=True)
         name = st.text_input("Name", key="capture_name")
         email = st.text_input("Email", key="capture_email")
         if st.button("Save", key="capture_save"):
