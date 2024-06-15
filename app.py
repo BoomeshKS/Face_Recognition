@@ -290,7 +290,7 @@ if "start_camera" not in st.session_state:
 if "captured_frame" not in st.session_state:
     st.session_state.captured_frame = None
 
-def start_camera(index=0):
+def start_camera(index=1):
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
         st.warning(f"Cannot open camera with index {index}")
