@@ -208,6 +208,7 @@
 
 
 
+
 import streamlit as st
 import cv2
 import pandas as pd
@@ -299,12 +300,13 @@ def start_camera(index=0):
         return None
     return cap
 
+camera_indices = [0, 1, 2, 3]  # Define camera indices here
+
 if menu == "Face Attendance":
     st.header("Face Attendance")
     run = st.checkbox('Run', key="attendance_run")
     FRAME_WINDOW = st.image([])
     
-    camera_indices = [0, 1, 2, 3]  # Add more indices if needed
     cap = None
     for index in camera_indices:
         cap = start_camera(index)
