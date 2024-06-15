@@ -232,12 +232,13 @@ def load_data(file_path, columns):
         return pd.DataFrame(columns=columns)
 
 # Initialize DataFrames from CSV files
-st.session_state.attendance_history = load_data(attendance_file, ["Name", "Email", "Date", "Time"])
-st.session_state.user_data = load_data(user_data_file, ["Name", "Email", "Image Path", "Date", "Time"])
+if "attendance_history" not in st.session_state:
+    st.session_state.attendance_history = load_data(attendance_file, ["Name", "Email", "Date", "Time"])
+if "user_data" not in st.session_state:
+    st.session_state.user_data = load_data(user_data_file, ["Name", "Email", "Image Path", "Date", "Time"])
 
 # Ensure the directory for saved images exists
-if not os.path.exists("registered_faces"):
-    os.makedirs("registered_faces")
+os.makedirs("registered_faces", exist_ok=True)
 
 # Load Haar Cascade for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -272,15 +273,10 @@ def save_data(file_path, data):
 
 # Function to clear all data
 def clear_all_data():
-    if os.path.exists("attendance"):
-        for file in os.listdir("attendance"):
-            os.remove(os.path.join("attendance", file))
-    if os.path.exists("users"):
-        for file in os.listdir("users"):
-            os.remove(os.path.join("users", file))
-    if os.path.exists("registered_faces"):
-        for file in os.listdir("registered_faces"):
-            os.remove(os.path.join("registered_faces", file))
+    for folder in ["attendance", "users", "registered_faces"]:
+        if os.path.exists(folder):
+            for file in os.listdir(folder):
+                os.remove(os.path.join(folder, file))
     st.session_state.attendance_history = pd.DataFrame(columns=["Name", "Email", "Date", "Time"])
     st.session_state.user_data = pd.DataFrame(columns=["Name", "Email", "Image Path", "Date", "Time"])
 
@@ -296,7 +292,6 @@ if "captured_frame" not in st.session_state:
 def start_camera(index=0):
     cap = cv2.VideoCapture(index)
     if not cap.isOpened():
-        st.warning(f"Cannot open camera with index {index}")
         return None
     return cap
 
@@ -368,7 +363,6 @@ elif menu == "Register Face":
         name = st.text_input("Name", key="upload_name")
         email = st.text_input("Email", key="upload_email")
         if st.button("Save", key="upload_save"):
-            st.checkbox("Are you sure you want to save?")
             img_path = os.path.join("registered_faces", f"{name}_{email}.jpg")
             img.save(img_path)
             now = datetime.datetime.now()
@@ -394,8 +388,6 @@ elif menu == "Register Face":
         if not cap:
             st.error("No available camera found.")
         
-        user = 1
-
         while cap and cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -408,12 +400,10 @@ elif menu == "Register Face":
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
 
             FRAME_WINDOW.image(frame, channels="BGR")
-            if user <= 1:
-                user += 1
-                if st.button("Capture", key="capture_button"):
-                    st.session_state.captured_frame = frame.copy()
-                    st.session_state.start_camera = False
-                    break
+            if st.button("Capture", key="capture_button"):
+                st.session_state.captured_frame = frame.copy()
+                st.session_state.start_camera = False
+                break
 
         if cap:
             cap.release()
