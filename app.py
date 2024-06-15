@@ -290,14 +290,21 @@ if "start_camera" not in st.session_state:
 if "captured_frame" not in st.session_state:
     st.session_state.captured_frame = None
 
+def start_camera(index=0):
+    cap = cv2.VideoCapture(index)
+    if not cap.isOpened():
+        st.warning(f"Cannot open camera with index {index}")
+        return None
+    return cap
+
 if menu == "Face Attendance":
     st.header("Face Attendance")
     run = st.checkbox('Run', key="attendance_run")
     FRAME_WINDOW = st.image([])
-    cap = cv2.VideoCapture(0)
+    cap = start_camera()
     registered_faces = load_registered_faces()
 
-    while run:
+    while run and cap:
         ret, frame = cap.read()
         if not ret:
             st.warning("Failed to capture image from camera.")
@@ -326,7 +333,8 @@ if menu == "Face Attendance":
 
         FRAME_WINDOW.image(frame, channels="BGR")
 
-    cap.release()
+    if cap:
+        cap.release()
 
 elif menu == "Register Face":
     st.header("Register Face")
@@ -339,7 +347,7 @@ elif menu == "Register Face":
         name = st.text_input("Name", key="upload_name")
         email = st.text_input("Email", key="upload_email")
         if st.button("Save", key="upload_save"):
-            st.checkbox("Are you want to save?")
+            st.checkbox("Are you sure you want to save?")
             img_path = os.path.join("registered_faces", f"{name}_{email}.jpg")
             img.save(img_path)
             now = datetime.datetime.now()
@@ -356,10 +364,10 @@ elif menu == "Register Face":
 
     if st.session_state.start_camera:
         FRAME_WINDOW = st.image([])
-        cap = cv2.VideoCapture(0)
+        cap = start_camera()
         user = 1
 
-        while cap.isOpened():
+        while cap and cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 st.warning("Failed to capture image from camera.")
@@ -378,7 +386,8 @@ elif menu == "Register Face":
                     st.session_state.start_camera = False
                     break
 
-        cap.release()
+        if cap:
+            cap.release()
 
     if st.session_state.captured_frame is not None:
         st.image(st.session_state.captured_frame, caption='Captured Image', use_column_width=True)
